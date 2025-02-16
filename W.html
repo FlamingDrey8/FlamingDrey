@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FlamingDrey</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Fonts for a futuristic look -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* Preloader Styles */
+    #preloader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+    }
+    @keyframes flicker {
+      0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        text-shadow: 0 0 10px red, 0 0 20px red, 0 0 30px red, 0 0 40px blue;
+      }
+      20%, 24%, 55% {
+        text-shadow: 0 0 20px red, 0 0 30px red, 0 0 40px red, 0 0 50px blue;
+      }
+    }
+    #preloader h1 {
+      font-size: 3rem;
+      animation: flicker 1.5s infinite;
+    }
+    
+    /* Background Animation: Loops between Blue & Red */
+    @keyframes rgbBackground {
+      0% { background: rgb(0, 0, 255); }
+      50% { background: rgb(255, 0, 0); }
+      100% { background: rgb(0, 0, 255); }
+    }
+    
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Orbitron', sans-serif;
+      animation: rgbBackground 6s infinite alternate;
+      background-size: cover;
+      color: #fff;
+      text-align: center;
+    }
+    /* Header */
+    header {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      font-size: 2rem;
+      font-weight: bold;
+      text-shadow: 0 0 10px red, 0 0 20px blue;
+    }
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    /* Search Bar */
+    #searchBar {
+      width: 80%;
+      max-width: 600px;
+      padding: 10px 15px;
+      font-size: 1rem;
+      margin: 20px auto;
+      border-radius: 4px;
+      border: none;
+      outline: none;
+      display: block;
+    }
+    /* Video Grid */
+    #videos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .video {
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 8px;
+      box-shadow: 0 0 15px red, 0 0 15px blue;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .video:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px red, 0 0 20px blue;
+    }
+    .video iframe {
+      width: 100%;
+      height: 180px;
+      border: none;
+    }
+    .video h3 {
+      font-size: 1rem;
+      padding: 10px;
+      color: cyan;
+    }
+    /* Load More Button */
+    #loadMore {
+      display: block;
+      margin: 30px auto;
+      padding: 12px 30px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(90deg, red, blue);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 10px red, 0 0 10px blue;
+      transition: all 0.3s ease;
+    }
+    #loadMore:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px red, 0 0 15px blue;
+    }
+    /* Footer */
+    footer {
+      padding: 20px 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      text-shadow: 0 0 5px red, 0 0 5px blue;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Preloader -->
+  <div id="preloader">
+    <h1>🔥 FlamingDrey 🔥</h1>
+    <p>Loading...</p>
+  </div>
+  
+  <!-- Main Content -->
+  <header>
+    🔥 Welcome to FlamingDrey 🔥
+  </header>
+  <div class="container">
+    <!-- Search Bar -->
+    <input type="text" id="searchBar" placeholder="Search videos...">
+    <div id="loading">🔥 Loading videos...</div>
+    <div id="videos"></div>
+    <button id="loadMore">Load More 🔥</button>
+  </div>
+  <footer>
+    &copy; 2025 FlamingDrey. Stay Lit! 🔥
+  </footer>
+
+  <script>
+    const API_KEY = 'AIzaSyAo9R3SP9CzAJkBbBN6-Q_zQURWWl2wT44';
+    const CHANNEL_ID = 'UCLnP5ai2mXlz7EkD3s7-Fsw';
+
+    let allVideos = [];
+    let uploadsPlaylistId = '';
+    let currentPage = 0;
+    const videosPerPage = 12;
+
+    async function getUploadPlaylistId() {
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.items[0].contentDetails.relatedPlaylists.uploads;
+    }
+
+    async function fetchAllVideos(pageToken = '') {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&pageToken=${pageToken}&key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.items) {
+        allVideos = allVideos.concat(data.items);
+      }
+      
+      if (data.nextPageToken) {
+        await fetchAllVideos(data.nextPageToken);
+      }
+    }
+
+    // Function to render a set of videos (paginated)
+    function renderVideos() {
+      const videosDiv = document.getElementById('videos');
+      const start = currentPage * videosPerPage;
+      const end = start + videosPerPage;
+      const videosToShow = allVideos.slice(start, end);
+
+      videosToShow.forEach(item => {
+        const videoId = item.snippet.resourceId.videoId;
+        const videoTitle = item.snippet.title;
+        const videoDiv = document.createElement('div');
+        videoDiv.className = 'video';
+        videoDiv.innerHTML = `
+          <iframe loading="lazy" src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+          <h3>${videoTitle}</h3>
+        `;
+        videosDiv.appendChild(videoDiv);
+      });
+
+      currentPage++;
+      // Hide "Load More" if no more videos
+      if (currentPage * videosPerPage >= allVideos.length) {
+        document.getElementById('loadMore').style.display = 'none';
+      }
+    }
+
+    // Function to render videos that match a search query (no pagination)
+    function renderSearchResults(query) {
+      const videosDiv = document.getElementById('videos');
+      videosDiv.innerHTML = ''; // Clear current videos
+      const filteredVideos = allVideos.filter(item => {
+        const title = item.snippet.title.toLowerCase();
+        return title.includes(query.toLowerCase());
+      });
+      if (filteredVideos.length === 0) {
+        videosDiv.innerHTML = '<p>No videos found.</p>';
+        return;
+      }
+      filteredVideos.forEach(item => {
+        const videoId = item.snippet.resourceId.videoId;
+        const videoTitle = item.snippet.title;
+        const videoDiv = document.createElement('div');
+        videoDiv.className = 'video';
+        videoDiv.innerHTML = `
+          <iframe loading="lazy" src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+          <h3>${videoTitle}</h3>
+        `;
+        videosDiv.appendChild(videoDiv);
+      });
+    }
+
+    async function loadVideos() {
+      document.getElementById('loading').textContent = '🔥 Loading videos...';
+      allVideos = [];
+      try {
+        if (!uploadsPlaylistId) {
+          uploadsPlaylistId = await getUploadPlaylistId();
+        }
+        await fetchAllVideos();
+        document.getElementById('loading').style.display = 'none';
+        renderVideos();
+      } catch (error) {
+        console.error('Error loading videos:', error);
+        document.getElementById('loading').textContent = '❌ Error loading videos!';
+      }
+    }
+
+    async function checkForNewVideos() {
+      try {
+        const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=1&key=${API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const latestVideoId = data.items[0].snippet.resourceId.videoId;
+        if (allVideos.length === 0 || allVideos[0].snippet.resourceId.videoId !== latestVideoId) {
+          currentPage = 0;
+          document.getElementById('videos').innerHTML = '';
+          await loadVideos();
+        }
+      } catch (error) {
+        console.error('Error checking for new videos:', error);
+      }
+    }
+
+    // Event listener for search bar input
+    document.getElementById('searchBar').addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      // If query is not empty, show search results; otherwise, reset pagination
+      if (query.length > 0) {
+        document.getElementById('loadMore').style.display = 'none';
+        renderSearchResults(query);
+      } else {
+        document.getElementById('videos').innerHTML = '';
+        currentPage = 0;
+        renderVideos();
+        // Show load more button if applicable
+        if (currentPage * videosPerPage < allVideos.length) {
+          document.getElementById('loadMore').style.display = 'block';
+        }
+      }
+    });
+
+    document.getElementById('loadMore').addEventListener('click', renderVideos);
+
+    // Once window is fully loaded, hide the preloader
+    window.addEventListener('load', () => {
+      const preloader = document.getElementById('preloader');
+      preloader.style.opacity = '0';
+      setTimeout(() => { preloader.style.display = 'none'; }, 500);
+    });
+
+    loadVideos();
+    setInterval(checkForNewVideos, 300000);
+  </script>
+</body>
+</html><ALOASK-SEPARATE-EDITORS><ALOASK-SEPARATE-EDITORS>
